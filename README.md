@@ -2,7 +2,7 @@
 About EMLIN
 ==========================================================================
 
-EMELF is a linker for MERA 400 EMELF objects.
+EMLIN is a linker for MERA 400 EMELF objects.
 
 Requirements
 ==========================================================================
