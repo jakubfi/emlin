@@ -129,8 +129,8 @@ static int load_names(struct emlin_object *obj)
 	sym = obj->e->symbol;
 	symcount = obj->e->symbol_count;
 	while (sym && (symcount > 0)) {
-		sym_name = obj->e->symbol_names + sym->offset;
 		if (sym->flags & EMELF_SYM_GLOBAL) {
+			sym_name = obj->e->symbol_names + sym->offset;
 			sym_obj = dh_get(names, sym_name);
 			if (sym_obj) {
 				printf("%s: Symbol '%s' already defined in object '%s'\n", obj->filename, sym_name, sym_obj->filename);
@@ -217,7 +217,7 @@ static int link(struct emelf *e, struct emlin_object *obj)
 
 		// @start reloc
 		if (reloc->flags & EMELF_RELOC_BASE) {
-			printf("%s: reloc @ %i @start: %i\n", obj->filename, reloc->addr + obj->offset, obj->offset);
+			printf("%s: reloc @ %i: @start + %i\n", obj->filename, reloc->addr + obj->offset, obj->offset);
 			e->image[reloc->addr + obj->offset] += obj->offset;
 		}
 
@@ -231,7 +231,7 @@ static int link(struct emelf *e, struct emlin_object *obj)
 			}
 
 			// find object that defines symbol
-			sym_name = obj->e->symbol_names + reloc->sym_idx;
+			sym_name = obj->e->symbol_names + obj->e->symbol[reloc->sym_idx].offset;
 			printf("%s: references: %s\n", obj->filename, sym_name);
 			sym_obj = dh_get(names, sym_name);
 			if (!sym_obj) {
@@ -239,7 +239,7 @@ static int link(struct emelf *e, struct emlin_object *obj)
 				return -1;
 			}
 
-			printf("%s: '%s' found in: %s\n", obj->filename, sym_name, sym_obj->filename);
+			printf("%s: '%s' is defined in: %s\n", obj->filename, sym_name, sym_obj->filename);
 			// link the object referenced by symbol
 			if (sym_obj->offset < 0) {
 				if (link(e, sym_obj)) {
@@ -254,8 +254,9 @@ static int link(struct emelf *e, struct emlin_object *obj)
 				return -1;
 			}
 
-			printf("%s: reloc @ %i by sym '%s': %i\n", obj->filename, reloc->addr + obj->offset, sym_name, sym->value);
-			e->image[reloc->addr + obj->offset] += sign * sym->value;
+			int16_t sym_value = sym->value;
+			printf("%s: reloc @ %i: by sym '%s' in %s value: %i\n", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->filename, sym_value);
+			e->image[reloc->addr + obj->offset] += sign * sym_value;
 			if (sym->flags & EMELF_SYM_RELATIVE) {
 				printf("%s: reloc @ %i by sym '%s' @start: %i\n", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->offset);
 				e->image[reloc->addr + obj->offset] += sign * sym_obj->offset;
