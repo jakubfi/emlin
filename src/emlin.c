@@ -103,7 +103,7 @@ static int parse_args(int argc, char **argv)
 		}
 
 		// add object to list
-		obj = malloc(sizeof(struct emlin_object));
+		obj = calloc(1, sizeof(struct emlin_object));
 		obj->filename = strdup(argv[optind]);
 		obj->e = NULL;
 		obj->offset = -1;
@@ -202,13 +202,13 @@ static int link(struct emelf *e, struct emlin_object *obj)
 	printf("%s: linking\n", obj->filename);
 
 	// copy image
-	res = emelf_image_append(e, obj->e->image, obj->e->image_pos);
+	res = emelf_image_append(e, obj->e->image, obj->e->image_size);
 	if (res != EMELF_E_OK)  {
 		printf("%s: cannot append image.\n", obj->filename);
 		return -1;
 	}
 	obj->offset = addr_top;
-	addr_top += obj->e->image_pos;
+	addr_top += obj->e->image_size;
 
 	// scan relocs
 	reloc = obj->e->reloc;
@@ -319,12 +319,12 @@ int main(int argc, char **argv)
 	if (otype == O_EMELF) {
 		res = emelf_write(e, f);
 	} else {
-		int pos = e->image_pos;
+		int pos = e->image_size;
 		while (pos >= 0) {
 			e->image[pos] = htons(e->image[pos]);
 			pos--;
 		}
-		res = fwrite(e->image, sizeof(uint16_t), e->image_pos, f);
+		res = fwrite(e->image, sizeof(uint16_t), e->image_size, f);
 		if (res <= 0) {
 			res = EMELF_E_FWRITE;
 		} else {
