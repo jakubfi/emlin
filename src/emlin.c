@@ -30,6 +30,7 @@
 char *output_file;
 int otype = O_EMELF;
 int cpu = EMELF_CPU_MERA400;
+int image_max = 32768;
 
 struct emlin_object *objects;
 struct emlin_object *entry;
@@ -180,6 +181,7 @@ static int load_objects()
 
 		if (obj->e->eh.cpu == EMELF_CPU_MX16) {
 			cpu = EMELF_CPU_MX16;
+			image_max = 65536;
 		}
 
 		obj = obj->next;
@@ -200,6 +202,16 @@ static int link(struct emelf *e, struct emlin_object *obj)
 	struct emelf_symbol *sym;
 
 	printf("%s: linking\n", obj->filename);
+
+	if (e->image_size + obj->e->image_size > image_max) {
+		printf("%s: image too big (%i > %i [words]) for %s cpu\n",
+			obj->filename,
+			e->image_size + obj->e->image_size,
+			image_max,
+			cpu == EMELF_CPU_MX16 ? "MX-16" : "MERA-400"
+		);
+		return 1;
+	}
 
 	// copy image
 	res = emelf_image_append(e, obj->e->image, obj->e->image_size);
