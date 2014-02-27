@@ -223,6 +223,8 @@ static int link(struct emelf *e, struct emlin_object *obj)
 	struct emlin_object *sym_obj;
 	char *sym_name;
 	struct emelf_symbol *sym;
+	char rstr[1024];
+	int rpos;
 
 	EDEBUG("==== linking %s @ %i", obj->filename, addr_top);
 
@@ -250,9 +252,12 @@ static int link(struct emelf *e, struct emlin_object *obj)
 	relcount = obj->e->reloc_count;
 	while (reloc && (relcount > 0)) {
 
+		rpos = 0;
+		rpos += snprintf(rstr+rpos, 1024-rpos-1, "%s: reloc @ %i: ", obj->filename, reloc->addr + obj->offset);
+
 		// @start reloc
 		if (reloc->flags & EMELF_RELOC_BASE) {
-			EDEBUG("%s: reloc @ %i: @start + %i", obj->filename, reloc->addr + obj->offset, obj->offset);
+			rpos += snprintf(rstr+rpos, 1024-rpos-1, " + (@start = %i)", obj->offset);
 			e->image[reloc->addr + obj->offset] += obj->offset;
 		}
 
@@ -291,12 +296,19 @@ static int link(struct emelf *e, struct emlin_object *obj)
 
 			int16_t sym_value = sym->value;
 			e->image[reloc->addr + obj->offset] += sign * sym_value;
+
+			rpos += snprintf(rstr+rpos, 1024-rpos-1, " %s (%s:%s = %i", sign>0 ? "+" : "-", sym_obj->filename, sym_name, sym_value);
+
 			if (sym->flags & EMELF_SYM_RELATIVE) {
-				EDEBUG("%s: reloc @ %i: %s (in %s) = %i + @start %i", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->filename, sym_value, sym_obj->offset);
+				if (reloc->flags & EMELF_RELOC_BASE) {
+					printf("%s: WARNING: relocating relative value by relative symbol '%s' value\n", obj->filename, sym_name);
+				}
+				rpos += snprintf(rstr+rpos, 1024-rpos-1, " + @start = %i)", sym_obj->offset);
 				e->image[reloc->addr + obj->offset] += sign * sym_obj->offset;
 			} else {
-				EDEBUG("%s: reloc @ %i: %s (in %s) = %i", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->filename, sym_value);
+				rpos += snprintf(rstr+rpos, 1024-rpos-1, ")");
 			}
+			EDEBUG("%s", rstr);
 		}
 		reloc++;
 		relcount--;
