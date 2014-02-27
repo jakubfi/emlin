@@ -22,10 +22,13 @@
 #include <strings.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
+#include <stdarg.h>
 #include <emelf.h>
 
 #include "emlin.h"
 #include "dh.h"
+
+int edebug;
 
 char *output_file;
 int otype = O_EMELF;
@@ -37,6 +40,18 @@ struct emlin_object *entry;
 int addr_top;
 
 struct dh_table *names;
+
+// -----------------------------------------------------------------------
+void EDEBUG(char *format, ...)
+{
+	if (!edebug) return;
+	fprintf(stderr, "DEBUG: ");
+	va_list ap;
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	fprintf(stderr, "\n");
+	va_end(ap);
+}
 
 // -----------------------------------------------------------------------
 static int add_libdir(char *dir)
@@ -54,6 +69,7 @@ static void usage()
 	printf("   -L <dir>   : search for libraries in <dir>\n");
     printf("   -v         : print version and exit\n");
 	printf("   -h         : print help and exit\n");
+	printf("   -d         : print debug information to stderr\n");
 }
 
 // -----------------------------------------------------------------------
@@ -62,7 +78,7 @@ static int parse_args(int argc, char **argv)
 	int option;
 	struct emlin_object *obj;
 
-	while ((option = getopt(argc, argv,"o:O:L:vh")) != -1) {
+	while ((option = getopt(argc, argv,"o:O:L:vhd")) != -1) {
 		switch (option) {
 			case 'o':
 				output_file = strdup(optarg);
@@ -87,6 +103,9 @@ static int parse_args(int argc, char **argv)
 			case 'h':
 				usage();
 				exit(0);
+				break;
+			case 'd':
+				edebug = 1;
 				break;
 			default:
 				return -1;
@@ -137,7 +156,7 @@ static int load_names(struct emlin_object *obj)
 				printf("%s: Symbol '%s' already defined in object '%s'\n", obj->filename, sym_name, sym_obj->filename);
 				return -1;
 			}
-			printf("%s: adding global name: %s\n", obj->filename, sym_name);
+			EDEBUG("%s: adding global name: %s", obj->filename, sym_name);
 			dh_add(names, sym_name, obj);
 		}
 		sym++;
@@ -153,7 +172,10 @@ static int load_objects()
 	struct emlin_object *obj = objects;
 	FILE *f;
 
+	EDEBUG("==== Loading objects ====");
+
 	while (obj) {
+		EDEBUG("%s", obj->filename);
 		f = fopen(obj->filename, "r");
 		if (!f) {
 			printf("Cannot open file '%s' for reading.\n", obj->filename);
@@ -168,6 +190,7 @@ static int load_objects()
 		}
 
 		if (emelf_has_entry(obj->e)) {
+			EDEBUG("%s has entry", obj->filename);
 			if (entry) {
 				printf("%s: entry point already defined in: %s\n", obj->filename, entry->filename);
 				return -1;
@@ -201,7 +224,7 @@ static int link(struct emelf *e, struct emlin_object *obj)
 	char *sym_name;
 	struct emelf_symbol *sym;
 
-	printf("%s: linking\n", obj->filename);
+	EDEBUG("==== linking %s @ %i", obj->filename, addr_top);
 
 	if (e->image_size + obj->e->image_size > image_max) {
 		printf("%s: image too big (%i > %i [words]) for %s cpu\n",
@@ -229,7 +252,7 @@ static int link(struct emelf *e, struct emlin_object *obj)
 
 		// @start reloc
 		if (reloc->flags & EMELF_RELOC_BASE) {
-			printf("%s: reloc @ %i: @start + %i\n", obj->filename, reloc->addr + obj->offset, obj->offset);
+			EDEBUG("%s: reloc @ %i: @start + %i", obj->filename, reloc->addr + obj->offset, obj->offset);
 			e->image[reloc->addr + obj->offset] += obj->offset;
 		}
 
@@ -244,14 +267,14 @@ static int link(struct emelf *e, struct emlin_object *obj)
 
 			// find object that defines symbol
 			sym_name = obj->e->symbol_names + obj->e->symbol[reloc->sym_idx].offset;
-			printf("%s: references: %s\n", obj->filename, sym_name);
 			sym_obj = dh_get(names, sym_name);
 			if (!sym_obj) {
 				printf("%s: symbol '%s' not defined.\n", obj->filename, sym_name);
 				return -1;
 			}
 
-			printf("%s: '%s' is defined in: %s\n", obj->filename, sym_name, sym_obj->filename);
+			EDEBUG("%s: references '%s' in %s", obj->filename, sym_name, sym_obj->filename);
+
 			// link the object referenced by symbol
 			if (sym_obj->offset < 0) {
 				if (link(e, sym_obj)) {
@@ -267,11 +290,12 @@ static int link(struct emelf *e, struct emlin_object *obj)
 			}
 
 			int16_t sym_value = sym->value;
-			printf("%s: reloc @ %i: by sym '%s' in %s value: %i\n", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->filename, sym_value);
 			e->image[reloc->addr + obj->offset] += sign * sym_value;
 			if (sym->flags & EMELF_SYM_RELATIVE) {
-				printf("%s: reloc @ %i by sym '%s' @start: %i\n", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->offset);
+				EDEBUG("%s: reloc @ %i: %s (in %s) = %i + @start %i", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->filename, sym_value, sym_obj->offset);
 				e->image[reloc->addr + obj->offset] += sign * sym_obj->offset;
+			} else {
+				EDEBUG("%s: reloc @ %i: %s (in %s) = %i", obj->filename, reloc->addr + obj->offset, sym_name, sym_obj->filename, sym_value);
 			}
 		}
 		reloc++;
