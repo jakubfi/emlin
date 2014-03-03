@@ -63,13 +63,14 @@ static int add_libdir(char *dir)
 // -----------------------------------------------------------------------
 static void usage()
 {
-	printf("Usage: emlin [options] -o output input [input ...]\n");
+	printf("Usage: emlin [options] input [input ...]\n");
 	printf("Where options are one or more of:\n");
-	printf("   -O <otype> : set output type: raw, emelf (defaults to raw)\n");
-	printf("   -L <dir>   : search for libraries in <dir>\n");
-    printf("   -v         : print version and exit\n");
-	printf("   -h         : print help and exit\n");
-	printf("   -d         : print debug information to stderr\n");
+	printf("   -o <output> : set output file (a.out otherwise)\n");
+	printf("   -O <otype>  : set output file type: raw, emelf (defaults to raw)\n");
+	printf("   -L <dir>    : search for libraries in <dir>\n");
+    printf("   -v          : print version and exit\n");
+	printf("   -h          : print help and exit\n");
+	printf("   -d          : print debug information to stderr\n");
 }
 
 // -----------------------------------------------------------------------
