@@ -394,6 +394,16 @@ int main(int argc, char **argv)
 cleanup:
 	emelf_destroy(e);
 	dh_destroy(names);
+	free(output_file);
+
+	struct emlin_object *o = objects;
+	while (o) {
+		struct emlin_object *next = o->next;
+		free(o->filename);
+		emelf_destroy(o->e);
+		free(o);
+		o = next;
+	}
 
 	return ret;
 }
