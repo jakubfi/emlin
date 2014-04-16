@@ -347,7 +347,7 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	e = emelf_create(EMELF_EXEC, cpu);
+	e = emelf_create(EMELF_EXEC, cpu, EMELF_ABI_V1);
 
 	if (link(e, entry)) {
 		goto cleanup;
