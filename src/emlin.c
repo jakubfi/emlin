@@ -172,6 +172,7 @@ static int load_objects()
 {
 	struct emlin_object *obj = objects;
 	FILE *f;
+	int abi = EMELF_ABI_UNKNOWN;
 
 	EDEBUG("==== Loading objects ====");
 
@@ -187,6 +188,13 @@ static int load_objects()
 		fclose(f);
 		if (!obj->e) {
 			printf("Cannot load object file: %s\n", obj->filename);
+			return -1;
+		}
+
+		if (abi == EMELF_ABI_UNKNOWN) {
+			abi = obj->e->eh.abi;
+		} else if (abi != obj->e->eh.abi) {
+			printf("Object ABI mismatch\n");
 			return -1;
 		}
 
