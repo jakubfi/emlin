@@ -1,9 +1,9 @@
 ADD_EXECUTABLE(emlin
-emlin.c
-dh.c
+	emlin.c
+	dh.c
 )
 
-TARGET_LINK_LIBRARIES(emlin emelf)
+TARGET_LINK_LIBRARIES(emlin ${EMELF_LIBRARIES})
 
 install(TARGETS emlin
 	RUNTIME DESTINATION bin
