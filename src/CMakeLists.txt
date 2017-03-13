@@ -3,6 +3,7 @@ ADD_EXECUTABLE(emlin
 	dh.c
 )
 
+include_directories(${EMELF_INCLUDE_DIRS})
 TARGET_LINK_LIBRARIES(emlin ${EMELF_LIBRARIES})
 
 install(TARGETS emlin
