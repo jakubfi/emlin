@@ -1,6 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.4)
 PROJECT(emlin C)
+
+include(GNUInstallDirs)
 include(appversion.cmake)
+
 find_package(emelf REQUIRED)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
